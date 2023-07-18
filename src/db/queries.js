@@ -1,5 +1,7 @@
 import query from "./db.js";
 
+const driveUrl = process.env.DRIVE_URL;
+
 const preparedStatements = {
   allFolders: {
     name: "get-all-folders",
@@ -8,11 +10,11 @@ const preparedStatements = {
   },
   previewData: {
     name: "get-folder-album-preview",
-    text: "SELECT folder AS name, img_id AS preview FROM images WHERE preview = true ORDER BY folder_order"
+    text: `SELECT folder AS name, CONCAT('${driveUrl}', img_id) AS preview FROM images WHERE preview = true ORDER BY folder_order`
   },
   allImages: {
     name: "get-all-images-data",
-    text: "SELECT id, img_order, img_id, caption FROM images ORDER BY img_order",
+    text: `SELECT id, img_order, CONCAT('${driveUrl}', img_id) AS src, caption FROM images ORDER BY img_order`,
   }
 };
 
@@ -32,8 +34,8 @@ const getImageData = {
   },
   byFolder: (folder) => {
     const statement =
-      "SELECT id, img_order, img_id, caption FROM images WHERE folder LIKE $1";
-    const params = [folder];
+      "SELECT id, img_order, CONCAT($1, img_id) AS src, caption FROM images WHERE folder LIKE $2";
+    const params = [`${driveUrl}`, folder];
     return query(statement, params);
   },
 };
