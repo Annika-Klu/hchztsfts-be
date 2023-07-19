@@ -27,9 +27,9 @@ const verifyPassword = async (password) => {
 };
 
 const token = {
-  insert: (token) => {
-    const statement = "INSERT INTO tokens (token) VALUES ($1)";
-    return query(statement, [token]);
+  insert: (tokenBase) => {
+    const statement = "INSERT INTO tokens (token) VALUES (encode($1::bytea, 'hex'))";
+    return query(statement, [`${tokenBase}`]);
   },
   concatWithPassword: async (randomWordFromToken) => {
     const statement = "SELECT CONCAT((SELECT password FROM users WHERE name LIKE 'Gast'), $1)";
