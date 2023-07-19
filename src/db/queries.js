@@ -6,27 +6,53 @@ const preparedStatements = {
   allFolders: {
     name: "get-all-folders",
     text: "SELECT DISTINCT folder FROM images",
-    rowMode: "array"
+    rowMode: "array",
   },
   previewData: {
     name: "get-folder-album-preview",
-    text: `SELECT folder AS name, CONCAT('${driveUrl}', img_id) AS preview FROM images WHERE preview = true ORDER BY folder_order`
+    text: `SELECT folder AS name, CONCAT('${driveUrl}', img_id) AS preview FROM images WHERE preview = true ORDER BY folder_order`,
   },
   allImages: {
     name: "get-all-images-data",
     text: `SELECT id, img_order, CONCAT('${driveUrl}', img_id) AS src, caption FROM images ORDER BY img_order`,
+  },
+};
+
+const verifyPassword = async (password) => {
+  const statement =
+    "SELECT EXISTS (SELECT id FROM users WHERE password LIKE $1)";
+  const result = await query(statement, [`${password}`]);
+  if (!result.rows.length) return false;
+  return result.rows[0].exists;
+};
+
+const token = {
+  insert: (tokenBase) => {
+    const statement = "INSERT INTO tokens (token) VALUES (encode($1::bytea, 'hex'))";
+    return query(statement, [`${tokenBase}`]);
+  },
+  concatWithPassword: async (randomWordFromToken) => {
+    const statement = "SELECT CONCAT((SELECT password FROM users WHERE name LIKE 'Gast'), $1)";
+    const { rows } = await query(statement, [`${randomWordFromToken}`]);
+    if (rows.length) return rows[0].concat;
+  },
+  validate: async (randomWordFromToken) => {
+    const concatenated = await token.concatWithPassword(randomWordFromToken);
+    const statement = "SELECT * FROM tokens WHERE token LIKE encode($1::bytea, 'hex') AND expires_at > NOW()";
+    const { rowCount: validTokenAvailable } = await query(statement, [`${concatenated}`]);
+    return Boolean(validTokenAvailable);
   }
 };
 
 const getFolderData = {
   allFolders: async () => {
     const result = await query(preparedStatements.allFolders);
-    return result.rows.map(arr => arr[0]);
+    return result.rows.map((arr) => arr[0]);
   },
   albumPreviews: () => {
     return query(preparedStatements.previewData);
-  }
-}
+  },
+};
 
 const getImageData = {
   all: () => {
@@ -40,4 +66,4 @@ const getImageData = {
   },
 };
 
-export default { getFolderData, getImageData };
+export default { verifyPassword, token, getFolderData, getImageData };
