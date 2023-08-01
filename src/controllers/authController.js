@@ -6,7 +6,7 @@ const login = async (req, res) => {
   try {
     const correctPassword = await queries.verifyPassword(password);
     if (!correctPassword) return res.status(401).json("Incorrect credentials.");
-    const randomWordFromToken = await generateToken(password);
+    const randomWordFromToken = await generateToken();
     res.status(200).json(randomWordFromToken);
   } catch (error) {
     const message = error.response ? error.response : error.message;
