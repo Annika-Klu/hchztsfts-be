@@ -28,18 +28,17 @@ const verifyPassword = async (password) => {
 
 const token = {
   insert: (tokenBase) => {
-    const statement = "INSERT INTO tokens (token) VALUES (encode($1::bytea, 'hex'))";
+    const statement = "INSERT INTO tokens (token) VALUES (sha256($1::bytea))";
     return query(statement, [`${tokenBase}`]);
   },
   concatWithPassword: async (randomWordFromToken) => {
-    const statement = "SELECT CONCAT((SELECT password FROM users WHERE name LIKE 'Gast'), $1)";
+    const statement = "SELECT CONCAT((SELECT password FROM users WHERE name LIKE 'Gast'), sha256($1::bytea))";
     const { rows } = await query(statement, [`${randomWordFromToken}`]);
     if (rows.length) return rows[0].concat;
   },
-  validate: async (randomWordFromToken) => {
-    const concatenated = await token.concatWithPassword(randomWordFromToken);
-    const statement = "SELECT * FROM tokens WHERE token LIKE encode($1::bytea, 'hex') AND expires_at > NOW()";
-    const { rowCount: validTokenAvailable } = await query(statement, [`${concatenated}`]);
+  validate: async (token) => {
+    const statement = "SELECT * FROM tokens WHERE token LIKE $1 AND expires_at > NOW()";
+    const { rowCount: validTokenAvailable } = await query(statement, [`${token}`]);
     return Boolean(validTokenAvailable);
   }
 };
