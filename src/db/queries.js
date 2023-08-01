@@ -20,10 +20,10 @@ const preparedStatements = {
 
 const verifyPassword = async (password) => {
   const statement =
-    "SELECT EXISTS (SELECT id FROM users WHERE password LIKE $1)";
+    "SELECT EXISTS (SELECT id FROM users WHERE name like 'Gast' AND password LIKE sha256($1::bytea))";
   const result = await query(statement, [`${password}`]);
-  if (!result.rows.length) return false;
-  return result.rows[0].exists;
+
+  return result.rows?.length ? result.rows[0].exists : false;
 };
 
 const token = {
