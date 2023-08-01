@@ -20,26 +20,25 @@ const preparedStatements = {
 
 const verifyPassword = async (password) => {
   const statement =
-    "SELECT EXISTS (SELECT id FROM users WHERE password LIKE $1)";
+    "SELECT EXISTS (SELECT id FROM users WHERE name like 'Gast' AND password LIKE sha256($1::bytea))";
   const result = await query(statement, [`${password}`]);
-  if (!result.rows.length) return false;
-  return result.rows[0].exists;
+
+  return result.rows?.length ? result.rows[0].exists : false;
 };
 
 const token = {
-  insert: (tokenBase) => {
-    const statement = "INSERT INTO tokens (token) VALUES (encode($1::bytea, 'hex'))";
-    return query(statement, [`${tokenBase}`]);
+  insert: (token) => {
+    const statement = "INSERT INTO tokens (token) VALUES ($1)";
+    return query(statement, [`${token}`]);
   },
   concatWithPassword: async (randomWordFromToken) => {
-    const statement = "SELECT CONCAT((SELECT password FROM users WHERE name LIKE 'Gast'), $1)";
+    const statement = "SELECT CONCAT((SELECT password FROM users WHERE name LIKE 'Gast'), sha256($1::bytea))";
     const { rows } = await query(statement, [`${randomWordFromToken}`]);
     if (rows.length) return rows[0].concat;
   },
-  validate: async (randomWordFromToken) => {
-    const concatenated = await token.concatWithPassword(randomWordFromToken);
-    const statement = "SELECT * FROM tokens WHERE token LIKE encode($1::bytea, 'hex') AND expires_at > NOW()";
-    const { rowCount: validTokenAvailable } = await query(statement, [`${concatenated}`]);
+  validate: async (token) => {
+    const statement = "SELECT * FROM tokens WHERE token LIKE CONCAT((SELECT password FROM users WHERE name LIKE 'Gast'), sha256($1::bytea)) AND expires_at > NOW()";
+    const { rowCount: validTokenAvailable } = await query(statement, [`${token}`]);
     return Boolean(validTokenAvailable);
   }
 };
